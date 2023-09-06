@@ -1,232 +1,313 @@
-'use strict';
-
-const _ = require('lodash');
-
-const db = require('../database');
-const topics = require('../topics');
-const categories = require('../categories');
-const user = require('../user');
-const notifications = require('../notifications');
-const plugins = require('../plugins');
-const flags = require('../flags');
-
+"use strict";
+/* eslint-disable @typescript-eslint/no-use-before-define */
+// Translate file from JS to TS
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+const lodash_1 = __importDefault(require("lodash"));
+const database_1 = __importDefault(require("../database"));
+const topics_1 = __importDefault(require("../topics"));
+const categories_1 = __importDefault(require("../categories"));
+const user_1 = __importDefault(require("../user"));
+const notifications_1 = __importDefault(require("../notifications"));
+const plugins_1 = __importDefault(require("../plugins"));
+const flags_1 = __importDefault(require("../flags"));
 module.exports = function (Posts) {
-    Posts.delete = async function (pid, uid) {
-        return await deleteOrRestore('delete', pid, uid);
-    };
-
-    Posts.restore = async function (pid, uid) {
-        return await deleteOrRestore('restore', pid, uid);
-    };
-
-    async function deleteOrRestore(type, pid, uid) {
-        const isDeleting = type === 'delete';
-        await plugins.hooks.fire(`filter:post.${type}`, { pid: pid, uid: uid });
-        await Posts.setPostFields(pid, {
-            deleted: isDeleting ? 1 : 0,
-            deleterUid: isDeleting ? uid : 0,
+    Posts.delete = function (pid, uid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield deleteOrRestore('delete', pid, uid);
         });
-        const postData = await Posts.getPostFields(pid, ['pid', 'tid', 'uid', 'content', 'timestamp']);
-        const topicData = await topics.getTopicFields(postData.tid, ['tid', 'cid', 'pinned']);
-        postData.cid = topicData.cid;
-        await Promise.all([
-            topics.updateLastPostTimeFromLastPid(postData.tid),
-            topics.updateTeaser(postData.tid),
-            isDeleting ?
-                db.sortedSetRemove(`cid:${topicData.cid}:pids`, pid) :
-                db.sortedSetAdd(`cid:${topicData.cid}:pids`, postData.timestamp, pid),
-        ]);
-        await categories.updateRecentTidForCid(postData.cid);
-        plugins.hooks.fire(`action:post.${type}`, { post: _.clone(postData), uid: uid });
-        if (type === 'delete') {
-            await flags.resolveFlag('post', pid, uid);
-        }
-        return postData;
+    };
+    Posts.restore = function (pid, uid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield deleteOrRestore('restore', pid, uid);
+        });
+    };
+    function deleteOrRestore(type, pid, uid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const isDeleting = type === 'delete';
+            yield plugins_1.default.hooks.fire(`filter:post.${type}`, { pid: pid, uid: uid });
+            yield Posts.setPostFields(pid, {
+                deleted: isDeleting ? 1 : 0,
+                deleterUid: isDeleting ? uid : 0,
+            });
+            const postData = yield Posts.getPostFields(pid, ['pid', 'tid', 'uid', 'content', 'timestamp']);
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+            const topicData = yield topics_1.default.getTopicFields(postData.tid, ['tid', 'cid', 'pinned']);
+            // The next line makes an assignment for a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            postData.cid = topicData.cid;
+            yield Promise.all([
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                topics_1.default.updateLastPostTimeFromLastPid(postData.tid),
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                topics_1.default.updateTeaser(postData.tid),
+                isDeleting ?
+                    // The next line calls a function in a module that has not been updated to TS yet
+                    // eslint-disable-next-line max-len
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/restrict-template-expressions
+                    database_1.default.sortedSetRemove(`cid:${topicData.cid}:pids`, pid) :
+                    // The next line calls a function in a module that has not been updated to TS yet
+                    // eslint-disable-next-line max-len
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/restrict-template-expressions
+                    database_1.default.sortedSetAdd(`cid:${topicData.cid}:pids`, postData.timestamp, pid),
+            ]);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            yield categories_1.default.updateRecentTidForCid(postData.cid);
+            plugins_1.default.hooks.fire(`action:post.${type}`, { post: lodash_1.default.clone(postData), uid: uid });
+            if (type === 'delete') {
+                yield flags_1.default.resolveFlag('post', pid, uid);
+            }
+            return postData;
+        });
     }
-
-    Posts.purge = async function (pids, uid) {
-        pids = Array.isArray(pids) ? pids : [pids];
-        let postData = await Posts.getPostsData(pids);
-        pids = pids.filter((pid, index) => !!postData[index]);
-        postData = postData.filter(Boolean);
-        if (!postData.length) {
-            return;
-        }
-        const uniqTids = _.uniq(postData.map(p => p.tid));
-        const topicData = await topics.getTopicsFields(uniqTids, ['tid', 'cid', 'pinned', 'postcount']);
-        const tidToTopic = _.zipObject(uniqTids, topicData);
-
-        postData.forEach((p) => {
-            p.topic = tidToTopic[p.tid];
-            p.cid = tidToTopic[p.tid] && tidToTopic[p.tid].cid;
+    Posts.purge = function (pids, uid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            pids = Array.isArray(pids) ? pids : [pids];
+            let postData = yield Posts.getPostsData(pids);
+            pids = pids.filter((pid, index) => !!postData[index]);
+            postData = postData.filter(Boolean);
+            if (!postData.length) {
+                return;
+            }
+            const uniqTids = lodash_1.default.uniq(postData.map(p => p.tid));
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+            const topicData = yield topics_1.default.getTopicsFields(uniqTids, ['tid', 'cid', 'pinned', 'postcount']);
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            const tidToTopic = lodash_1.default.zipObject(uniqTids, topicData);
+            postData.forEach((p) => {
+                p.topic = tidToTopic[p.tid];
+                p.cid = tidToTopic[p.tid].cid;
+            });
+            // deprecated hook
+            yield Promise.all(postData.map(p => plugins_1.default.hooks.fire('filter:post.purge', { post: p, pid: p.pid, uid: uid })));
+            // new hook
+            yield plugins_1.default.hooks.fire('filter:posts.purge', {
+                posts: postData,
+                pids: postData.map(p => p.pid),
+                uid: uid,
+            });
+            yield Promise.all([
+                deleteFromTopicUserNotification(postData),
+                deleteFromCategoryRecentPosts(postData),
+                deleteFromUsersBookmarks(pids),
+                deleteFromUsersVotes(pids),
+                deleteFromReplies(postData),
+                deleteFromGroups(pids),
+                deleteDiffs(pids),
+                deleteFromUploads(pids),
+                database_1.default.sortedSetsRemove(['posts:pid', 'posts:votes', 'posts:flagged'], pids),
+            ]);
+            yield resolveFlags(postData, uid);
+            // deprecated hook
+            Promise.all(postData.map(p => plugins_1.default.hooks.fire('action:post.purge', { post: p, uid: uid })));
+            // new hook
+            plugins_1.default.hooks.fire('action:posts.purge', { posts: postData, uid: uid });
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.deleteAll(postData.map(p => `post:${p.pid}`));
         });
-
-        // deprecated hook
-        await Promise.all(postData.map(p => plugins.hooks.fire('filter:post.purge', { post: p, pid: p.pid, uid: uid })));
-
-        // new hook
-        await plugins.hooks.fire('filter:posts.purge', {
-            posts: postData,
-            pids: postData.map(p => p.pid),
-            uid: uid,
-        });
-
-        await Promise.all([
-            deleteFromTopicUserNotification(postData),
-            deleteFromCategoryRecentPosts(postData),
-            deleteFromUsersBookmarks(pids),
-            deleteFromUsersVotes(pids),
-            deleteFromReplies(postData),
-            deleteFromGroups(pids),
-            deleteDiffs(pids),
-            deleteFromUploads(pids),
-            db.sortedSetsRemove(['posts:pid', 'posts:votes', 'posts:flagged'], pids),
-        ]);
-
-        await resolveFlags(postData, uid);
-
-        // deprecated hook
-        Promise.all(postData.map(p => plugins.hooks.fire('action:post.purge', { post: p, uid: uid })));
-
-        // new hook
-        plugins.hooks.fire('action:posts.purge', { posts: postData, uid: uid });
-
-        await db.deleteAll(postData.map(p => `post:${p.pid}`));
     };
-
-    async function deleteFromTopicUserNotification(postData) {
-        const bulkRemove = [];
-        postData.forEach((p) => {
-            bulkRemove.push([`tid:${p.tid}:posts`, p.pid]);
-            bulkRemove.push([`tid:${p.tid}:posts:votes`, p.pid]);
-            bulkRemove.push([`uid:${p.uid}:posts`, p.pid]);
-            bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids`, p.pid]);
-            bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids:votes`, p.pid]);
-        });
-        await db.sortedSetRemoveBulk(bulkRemove);
-
-        const incrObjectBulk = [['global', { postCount: -postData.length }]];
-
-        const postsByCategory = _.groupBy(postData, p => parseInt(p.cid, 10));
-        for (const [cid, posts] of Object.entries(postsByCategory)) {
-            incrObjectBulk.push([`category:${cid}`, { post_count: -posts.length }]);
-        }
-
-        const postsByTopic = _.groupBy(postData, p => parseInt(p.tid, 10));
-        const topicPostCountTasks = [];
-        const topicTasks = [];
-        const zsetIncrBulk = [];
-        for (const [tid, posts] of Object.entries(postsByTopic)) {
-            incrObjectBulk.push([`topic:${tid}`, { postcount: -posts.length }]);
-            if (posts.length && posts[0]) {
-                const topicData = posts[0].topic;
-                const newPostCount = topicData.postcount - posts.length;
-                topicPostCountTasks.push(['topics:posts', newPostCount, tid]);
-                if (!topicData.pinned) {
-                    zsetIncrBulk.push([`cid:${topicData.cid}:tids:posts`, -posts.length, tid]);
+    function deleteFromTopicUserNotification(postData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const bulkRemove = [];
+            postData.forEach((p) => {
+                bulkRemove.push([`tid:${p.tid}:posts`, p.pid]);
+                bulkRemove.push([`tid:${p.tid}:posts:votes`, p.pid]);
+                bulkRemove.push([`uid:${p.uid}:posts`, p.pid]);
+                bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids`, p.pid]);
+                bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids:votes`, p.pid]);
+            });
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.sortedSetRemoveBulk(bulkRemove);
+            const incrObjectBulk = [['global', { postCount: -postData.length }]];
+            const postsByCategory = lodash_1.default.groupBy(postData, p => parseInt(String(p.cid), 10));
+            for (const [cid, posts] of Object.entries(postsByCategory)) {
+                incrObjectBulk.push([`category:${cid}`, { postCount: -posts.length }]);
+            }
+            const postsByTopic = lodash_1.default.groupBy(postData, p => parseInt(String(p.tid), 10));
+            const topicPostCountTasks = [];
+            const topicTasks = [];
+            const zsetIncrBulk = [];
+            for (const [tid, posts] of Object.entries(postsByTopic)) {
+                incrObjectBulk.push([`topic:${tid}`, { postCount: -posts.length }]);
+                if (posts.length && posts[0]) {
+                    const topicData = posts[0].topic;
+                    const newPostCount = Number(topicData.postcount) - posts.length;
+                    topicPostCountTasks.push(['topics:posts', newPostCount, tid]);
+                    if (!topicData.pinned) {
+                        zsetIncrBulk.push([`cid:${topicData.cid}:tids:posts`, -posts.length, tid]);
+                    }
                 }
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                topicTasks.push(topics_1.default.updateTeaser(tid));
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                topicTasks.push(topics_1.default.updateLastPostTimeFromLastPid(tid));
+                const postsByUid = lodash_1.default.groupBy(posts, p => parseInt(String(p.uid), 10));
+                for (const [uid, uidPosts] of Object.entries(postsByUid)) {
+                    zsetIncrBulk.push([`tid:${tid}:posters`, -uidPosts.length, uid]);
+                }
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                topicTasks.push(database_1.default.sortedSetIncrByBulk(zsetIncrBulk));
             }
-            topicTasks.push(topics.updateTeaser(tid));
-            topicTasks.push(topics.updateLastPostTimeFromLastPid(tid));
-            const postsByUid = _.groupBy(posts, p => parseInt(p.uid, 10));
-            for (const [uid, uidPosts] of Object.entries(postsByUid)) {
-                zsetIncrBulk.push([`tid:${tid}:posters`, -uidPosts.length, uid]);
-            }
-            topicTasks.push(db.sortedSetIncrByBulk(zsetIncrBulk));
-        }
-
-        await Promise.all([
-            db.incrObjectFieldByBulk(incrObjectBulk),
-            db.sortedSetAddBulk(topicPostCountTasks),
-            ...topicTasks,
-            user.updatePostCount(_.uniq(postData.map(p => p.uid))),
-            notifications.rescind(...postData.map(p => `new_post:tid:${p.tid}:pid:${p.pid}:uid:${p.uid}`)),
-        ]);
-    }
-
-    async function deleteFromCategoryRecentPosts(postData) {
-        const uniqCids = _.uniq(postData.map(p => p.cid));
-        const sets = uniqCids.map(cid => `cid:${cid}:pids`);
-        await db.sortedSetRemove(sets, postData.map(p => p.pid));
-        await Promise.all(uniqCids.map(categories.updateRecentTidForCid));
-    }
-
-    async function deleteFromUsersBookmarks(pids) {
-        const arrayOfUids = await db.getSetsMembers(pids.map(pid => `pid:${pid}:users_bookmarked`));
-        const bulkRemove = [];
-        pids.forEach((pid, index) => {
-            arrayOfUids[index].forEach((uid) => {
-                bulkRemove.push([`uid:${uid}:bookmarks`, pid]);
-            });
+            yield Promise.all([
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.incrObjectFieldByBulk(incrObjectBulk),
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.sortedSetAddBulk(topicPostCountTasks),
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                ...topicTasks,
+                // This next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                user_1.default.updatePostCount(lodash_1.default.uniq(postData.map(p => p.uid))),
+                notifications_1.default.rescind(...postData.map(p => `new_post:tid:${p.tid}:pid:${p.pid}:uid:${p.uid}`)),
+            ]);
         });
-        await db.sortedSetRemoveBulk(bulkRemove);
-        await db.deleteAll(pids.map(pid => `pid:${pid}:users_bookmarked`));
     }
-
-    async function deleteFromUsersVotes(pids) {
-        const [upvoters, downvoters] = await Promise.all([
-            db.getSetsMembers(pids.map(pid => `pid:${pid}:upvote`)),
-            db.getSetsMembers(pids.map(pid => `pid:${pid}:downvote`)),
-        ]);
-        const bulkRemove = [];
-        pids.forEach((pid, index) => {
-            upvoters[index].forEach((upvoterUid) => {
-                bulkRemove.push([`uid:${upvoterUid}:upvote`, pid]);
-            });
-            downvoters[index].forEach((downvoterUid) => {
-                bulkRemove.push([`uid:${downvoterUid}:downvote`, pid]);
-            });
+    function deleteFromCategoryRecentPosts(postData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const uniqCids = lodash_1.default.uniq(postData.map(p => p.cid));
+            const sets = uniqCids.map(cid => `cid:${cid}:pids`);
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.sortedSetRemove(sets, postData.map(p => p.pid));
+            yield Promise.all(uniqCids.map(categories_1.default.updateRecentTidForCid));
         });
-
-        await Promise.all([
-            db.sortedSetRemoveBulk(bulkRemove),
-            db.deleteAll([
-                ...pids.map(pid => `pid:${pid}:upvote`),
-                ...pids.map(pid => `pid:${pid}:downvote`),
-            ]),
-        ]);
     }
-
-    async function deleteFromReplies(postData) {
-        const arrayOfReplyPids = await db.getSortedSetsMembers(postData.map(p => `pid:${p.pid}:replies`));
-        const allReplyPids = _.flatten(arrayOfReplyPids);
-        const promises = [
-            db.deleteObjectFields(
-                allReplyPids.map(pid => `post:${pid}`), ['toPid']
-            ),
-            db.deleteAll(postData.map(p => `pid:${p.pid}:replies`)),
-        ];
-
-        const postsWithParents = postData.filter(p => parseInt(p.toPid, 10));
-        const bulkRemove = postsWithParents.map(p => [`pid:${p.toPid}:replies`, p.pid]);
-        promises.push(db.sortedSetRemoveBulk(bulkRemove));
-        await Promise.all(promises);
-
-        const parentPids = _.uniq(postsWithParents.map(p => p.toPid));
-        const counts = await db.sortedSetsCard(parentPids.map(pid => `pid:${pid}:replies`));
-        await db.setObjectBulk(parentPids.map((pid, index) => [`post:${pid}`, { replies: counts[index] }]));
+    function deleteFromUsersBookmarks(pids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const arrayOfUids = yield database_1.default.getSetsMembers(pids.map(pid => `pid:${pid}:users_bookmarked`));
+            const bulkRemove = [];
+            pids.forEach((pid, index) => {
+                arrayOfUids[index].forEach((uid) => {
+                    bulkRemove.push([`uid:${uid}:bookmarks`, pid]);
+                });
+            });
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.sortedSetRemoveBulk(bulkRemove);
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.deleteAll(pids.map(pid => `pid:${pid}:users_bookmarked`));
+        });
     }
-
-    async function deleteFromGroups(pids) {
-        const groupNames = await db.getSortedSetMembers('groups:visible:createtime');
-        const keys = groupNames.map(groupName => `group:${groupName}:member:pids`);
-        await db.sortedSetRemove(keys, pids);
+    function deleteFromUsersVotes(pids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const [upvoters, downvoters] = yield Promise.all([
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.getSetsMembers(pids.map(pid => `pid:${pid}:upvote`)),
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.getSetsMembers(pids.map(pid => `pid:${pid}:downvote`)),
+            ]);
+            const bulkRemove = [];
+            pids.forEach((pid, index) => {
+                upvoters[index].forEach((upvoterUid) => {
+                    bulkRemove.push([`uid:${upvoterUid}:upvote`, pid]);
+                });
+                downvoters[index].forEach((downvoterUid) => {
+                    bulkRemove.push([`uid:${downvoterUid}:downvote`, pid]);
+                });
+            });
+            yield Promise.all([
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.sortedSetRemoveBulk(bulkRemove),
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.deleteAll([
+                    ...pids.map(pid => `pid:${pid}:upvote`),
+                    ...pids.map(pid => `pid:${pid}:downvote`),
+                ]),
+            ]);
+        });
     }
-
-    async function deleteDiffs(pids) {
-        const timestamps = await Promise.all(pids.map(pid => Posts.diffs.list(pid)));
-        await db.deleteAll([
-            ...pids.map(pid => `post:${pid}:diffs`),
-            ..._.flattenDeep(pids.map((pid, index) => timestamps[index].map(t => `diff:${pid}.${t}`))),
-        ]);
+    function deleteFromReplies(postData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const arrayOfReplyPids = yield database_1.default.getSortedSetsMembers(postData.map(p => `pid:${p.pid}:replies`));
+            const allReplyPids = lodash_1.default.flatten(arrayOfReplyPids);
+            const promises = [
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.deleteObjectFields(allReplyPids.map(pid => `post:${pid}`), ['toPid']),
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                database_1.default.deleteAll(postData.map(p => `pid:${p.pid}:replies`)),
+            ];
+            const postsWithParents = postData.filter(p => parseInt(String(p.toPid), 10));
+            const bulkRemove = postsWithParents.map(p => [`pid:${p.toPid}:replies`, p.pid]);
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            promises.push(database_1.default.sortedSetRemoveBulk(bulkRemove));
+            yield Promise.all(promises);
+            const parentPids = lodash_1.default.uniq(postsWithParents.map(p => p.toPid));
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const counts = yield database_1.default.sortedSetsCard(parentPids.map(pid => `pid:${pid}:replies`));
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.setObjectBulk(parentPids.map((pid, index) => [`post:${pid}`, { replies: counts[index] }]));
+        });
     }
-
-    async function deleteFromUploads(pids) {
-        await Promise.all(pids.map(Posts.uploads.dissociateAll));
+    function deleteFromGroups(pids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const groupNames = yield database_1.default.getSortedSetMembers('groups:visible:createtime');
+            const keys = groupNames.map(groupName => `group:${groupName}:member:pids`);
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.sortedSetRemove(keys, pids);
+        });
     }
-
-    async function resolveFlags(postData, uid) {
-        const flaggedPosts = postData.filter(p => parseInt(p.flagId, 10));
-        await Promise.all(flaggedPosts.map(p => flags.update(p.flagId, uid, { state: 'resolved' })));
+    function deleteDiffs(pids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const timestamps = yield Promise.all(pids.map(pid => Posts.diffs.list(pid)));
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            yield database_1.default.deleteAll([
+                ...pids.map(pid => `post:${pid}:diffs`),
+                ...lodash_1.default.flattenDeep(pids.map((pid, index) => timestamps[index].map(t => `diff:${pid}.${t}`))),
+            ]);
+        });
+    }
+    function deleteFromUploads(pids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all(pids.map(Posts.uploads.dissociateAll));
+        });
+    }
+    function resolveFlags(postData, uid) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const flaggedPosts = postData.filter(p => parseInt(String(p.flagId), 10));
+            yield Promise.all(flaggedPosts.map(p => flags_1.default.update(p.flagId, uid, { state: 'resolved' })));
+        });
     }
 };
