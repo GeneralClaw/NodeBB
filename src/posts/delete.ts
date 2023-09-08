@@ -214,15 +214,21 @@ exports = function (Posts: PostType) {
                 value: number, index: number, array: number[]) =>unknown)(cid, index, array)));
     }
 
-    async function deleteFromUsersBookmarks(pids) {
-        const arrayOfUids = await db.getSetsMembers(pids.map(pid => `pid:${pid}:users_bookmarked`));
+    async function deleteFromUsersBookmarks(pids: number[]) {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const arrayOfUids = await db.getSetsMembers(pids.map(pid => `pid:${pid}:users_bookmarked`)) as number[][];
         const bulkRemove = [];
-        pids.forEach((pid, index) => {
-            arrayOfUids[index].forEach((uid) => {
+        pids.forEach((pid: number, index: number) => {
+            arrayOfUids[index].forEach((uid: number) => {
                 bulkRemove.push([`uid:${uid}:bookmarks`, pid]);
             });
         });
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.sortedSetRemoveBulk(bulkRemove);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.deleteAll(pids.map(pid => `pid:${pid}:users_bookmarked`));
     }
 
