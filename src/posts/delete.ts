@@ -46,7 +46,7 @@ interface PostData {
   topic?: TopicObject;
 }
 
-exports = function (Posts: PostType) {
+export = function (Posts: PostType) {
     Posts.delete = async function (pid: number, uid: number): Promise<PostData> {
         return await deleteOrRestore('delete', pid, uid);
     };
