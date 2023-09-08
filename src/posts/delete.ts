@@ -337,9 +337,8 @@ exports = function (Posts: PostType) {
         await Promise.all(pids.map(Posts.uploads.dissociateAll));
     }
 
-
-    async function resolveFlags(postData, uid) {
-        const flaggedPosts = postData.filter(p => parseInt(p.flagId, 10));
+    async function resolveFlags(postData: PostData[], uid: number): Promise<void> {
+        const flaggedPosts = postData.filter(p => parseInt(String(p.flagId), 10));
         await Promise.all(flaggedPosts.map(p => flags.update(p.flagId, uid, { state: 'resolved' })));
     }
 };
