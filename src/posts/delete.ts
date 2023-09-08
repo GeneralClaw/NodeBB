@@ -137,7 +137,7 @@ exports = function (Posts: PostType) {
         await db.deleteAll(postData.map(p => `post:${p.pid}`));
     };
 
-    async function deleteFromTopicUserNotification(postData) {
+    async function deleteFromTopicUserNotification(postData: PostData[]) {
         const bulkRemove = [];
         postData.forEach((p) => {
             bulkRemove.push([`tid:${p.tid}:posts`, p.pid]);
@@ -146,35 +146,43 @@ exports = function (Posts: PostType) {
             bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids`, p.pid]);
             bulkRemove.push([`cid:${p.cid}:uid:${p.uid}:pids:votes`, p.pid]);
         });
+        // This next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.sortedSetRemoveBulk(bulkRemove);
 
         const incrObjectBulk = [['global', { postCount: -postData.length }]];
 
-        const postsByCategory = _.groupBy(postData, p => parseInt(p.cid, 10));
+        const postsByCategory = _.groupBy(postData, p => parseInt(String(p.cid), 10));
         for (const [cid, posts] of Object.entries(postsByCategory)) {
-            incrObjectBulk.push([`category:${cid}`, { post_count: -posts.length }]);
+            incrObjectBulk.push([`category:${cid}`, { postCount: -posts.length }]);
         }
 
-        const postsByTopic = _.groupBy(postData, p => parseInt(p.tid, 10));
+        const postsByTopic = _.groupBy(postData, p => parseInt(String(p.tid), 10));
         const topicPostCountTasks = [];
         const topicTasks = [];
         const zsetIncrBulk = [];
         for (const [tid, posts] of Object.entries(postsByTopic)) {
-            incrObjectBulk.push([`topic:${tid}`, { postcount: -posts.length }]);
+            incrObjectBulk.push([`topic:${tid}`, { postCount: -posts.length }]);
             if (posts.length && posts[0]) {
                 const topicData = posts[0].topic;
-                const newPostCount = topicData.postcount - posts.length;
+                const newPostCount = Number(topicData.postcount) - posts.length;
                 topicPostCountTasks.push(['topics:posts', newPostCount, tid]);
                 if (!topicData.pinned) {
                     zsetIncrBulk.push([`cid:${topicData.cid}:tids:posts`, -posts.length, tid]);
                 }
             }
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             topicTasks.push(topics.updateTeaser(tid));
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             topicTasks.push(topics.updateLastPostTimeFromLastPid(tid));
-            const postsByUid = _.groupBy(posts, p => parseInt(p.uid, 10));
+            const postsByUid = _.groupBy(posts, p => parseInt(String(p.uid), 10));
             for (const [uid, uidPosts] of Object.entries(postsByUid)) {
                 zsetIncrBulk.push([`tid:${tid}:posters`, -uidPosts.length, uid]);
             }
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             topicTasks.push(db.sortedSetIncrByBulk(zsetIncrBulk));
         }
 
