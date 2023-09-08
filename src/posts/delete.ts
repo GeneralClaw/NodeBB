@@ -264,29 +264,45 @@ exports = function (Posts: PostType) {
         ]);
     }
 
-    async function deleteFromReplies(postData) {
-        const arrayOfReplyPids = await db.getSortedSetsMembers(postData.map(p => `pid:${p.pid}:replies`));
+    async function deleteFromReplies(postData: PostData[]) {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const arrayOfReplyPids = await db.getSortedSetsMembers(postData.map(p => `pid:${p.pid}:replies`)) as number[][];
         const allReplyPids = _.flatten(arrayOfReplyPids);
         const promises = [
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.deleteObjectFields(
                 allReplyPids.map(pid => `post:${pid}`), ['toPid']
             ),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.deleteAll(postData.map(p => `pid:${p.pid}:replies`)),
         ];
 
-        const postsWithParents = postData.filter(p => parseInt(p.toPid, 10));
-        const bulkRemove = postsWithParents.map(p => [`pid:${p.toPid}:replies`, p.pid]);
+        const postsWithParents = postData.filter(p => parseInt(String(p.toPid), 10));
+        const bulkRemove: [string, number][] = postsWithParents.map(p => [`pid:${p.toPid}:replies`, p.pid]);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         promises.push(db.sortedSetRemoveBulk(bulkRemove));
         await Promise.all(promises);
 
         const parentPids = _.uniq(postsWithParents.map(p => p.toPid));
-        const counts = await db.sortedSetsCard(parentPids.map(pid => `pid:${pid}:replies`));
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const counts = await db.sortedSetsCard(parentPids.map(pid => `pid:${pid}:replies`)) as number[];
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.setObjectBulk(parentPids.map((pid, index) => [`post:${pid}`, { replies: counts[index] }]));
     }
 
-    async function deleteFromGroups(pids) {
-        const groupNames = await db.getSortedSetMembers('groups:visible:createtime');
+    async function deleteFromGroups(pids: number[]) {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const groupNames = await db.getSortedSetMembers('groups:visible:createtime') as string[];
         const keys = groupNames.map(groupName => `group:${groupName}:member:pids`);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.sortedSetRemove(keys, pids);
     }
 
