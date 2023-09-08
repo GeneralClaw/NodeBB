@@ -232,10 +232,14 @@ exports = function (Posts: PostType) {
         await db.deleteAll(pids.map(pid => `pid:${pid}:users_bookmarked`));
     }
 
-    async function deleteFromUsersVotes(pids) {
+    async function deleteFromUsersVotes(pids: number[]) {
         const [upvoters, downvoters] = await Promise.all([
-            db.getSetsMembers(pids.map(pid => `pid:${pid}:upvote`)),
-            db.getSetsMembers(pids.map(pid => `pid:${pid}:downvote`)),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            db.getSetsMembers(pids.map(pid => `pid:${pid}:upvote`)) as number[][],
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            db.getSetsMembers(pids.map(pid => `pid:${pid}:downvote`)) as number[][],
         ]);
         const bulkRemove = [];
         pids.forEach((pid, index) => {
@@ -248,7 +252,11 @@ exports = function (Posts: PostType) {
         });
 
         await Promise.all([
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.sortedSetRemoveBulk(bulkRemove),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.deleteAll([
                 ...pids.map(pid => `pid:${pid}:upvote`),
                 ...pids.map(pid => `pid:${pid}:downvote`),
