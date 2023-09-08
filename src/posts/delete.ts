@@ -187,19 +187,31 @@ exports = function (Posts: PostType) {
         }
 
         await Promise.all([
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.incrObjectFieldByBulk(incrObjectBulk),
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.sortedSetAddBulk(topicPostCountTasks),
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             ...topicTasks,
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             user.updatePostCount(_.uniq(postData.map(p => p.uid))),
             notifications.rescind(...postData.map(p => `new_post:tid:${p.tid}:pid:${p.pid}:uid:${p.uid}`)),
         ]);
     }
 
-    async function deleteFromCategoryRecentPosts(postData) {
+    async function deleteFromCategoryRecentPosts(postData: PostData[]) {
         const uniqCids = _.uniq(postData.map(p => p.cid));
         const sets = uniqCids.map(cid => `cid:${cid}:pids`);
+        // This next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.sortedSetRemove(sets, postData.map(p => p.pid));
-        await Promise.all(uniqCids.map(categories.updateRecentTidForCid));
+        await Promise.all(uniqCids.map((cid, index, array) => (
+            categories.updateRecentTidForCid as (
+                value: number, index: number, array: number[]) =>unknown)(cid, index, array)));
     }
 
     async function deleteFromUsersBookmarks(pids) {
