@@ -9,8 +9,14 @@ import plugins from '../plugins';
 import flags from '../flags';
 import { TopicObject } from '../types/topic';
 
+interface ListFunction {
+  (pid: number): Promise<number[]>;
+}
+interface Diffs {
+  list: ListFunction;
+}
 interface PostType {
-
+  diffs: Diffs;
   delete: (pid: number, uid: number) => Promise<PostData>;
   restore: (pid: number, uid: number) => Promise<PostData>;
   purge: (pids: number | number[], uid: number) => Promise<void>;
@@ -306,8 +312,12 @@ exports = function (Posts: PostType) {
         await db.sortedSetRemove(keys, pids);
     }
 
-    async function deleteDiffs(pids) {
-        const timestamps = await Promise.all(pids.map(pid => Posts.diffs.list(pid)));
+    async function deleteDiffs(pids: number[]): Promise<void> {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const timestamps: number[][] = await Promise.all(pids.map(pid => Posts.diffs.list(pid)));
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.deleteAll([
             ...pids.map(pid => `post:${pid}:diffs`),
             ..._.flattenDeep(pids.map((pid, index) => timestamps[index].map(t => `diff:${pid}.${t}`))),
