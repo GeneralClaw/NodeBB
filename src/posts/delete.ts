@@ -128,11 +128,12 @@ exports = function (Posts: PostType) {
         await resolveFlags(postData, uid);
 
         // deprecated hook
-        Promise.all(postData.map(p => plugins.hooks.fire('action:post.purge', { post: p, uid: uid })));
+        Promise.all(postData.map(p => plugins.hooks.fire('action:post.purge', { post: p, uid: uid }))).catch((error) => { console.error('Error:', error); });
 
         // new hook
-        plugins.hooks.fire('action:posts.purge', { posts: postData, uid: uid });
-
+        plugins.hooks.fire('action:posts.purge', { posts: postData, uid: uid }).catch((error) => { console.error('Error:', error); });
+        // This next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await db.deleteAll(postData.map(p => `post:${p.pid}`));
     };
 
