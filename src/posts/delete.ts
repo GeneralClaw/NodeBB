@@ -1,16 +1,13 @@
-'use strict';
+import _ from 'lodash';
+import db from '../database';
+import topics from '../topics';
+import categories from '../categories';
+import user from '../user';
+import notifications from '../notifications';
+import plugins from '../plugins';
+import flags from '../flags';
 
-const _ = require('lodash');
-
-const db = require('../database');
-const topics = require('../topics');
-const categories = require('../categories');
-const user = require('../user');
-const notifications = require('../notifications');
-const plugins = require('../plugins');
-const flags = require('../flags');
-
-module.exports = function (Posts) {
+exports = function (Posts) {
     Posts.delete = async function (pid, uid) {
         return await deleteOrRestore('delete', pid, uid);
     };
