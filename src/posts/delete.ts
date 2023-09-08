@@ -29,12 +29,12 @@ interface PostData {
   topic?: TopicObject;
 }
 
-exports = function (Posts) {
-    Posts.delete = async function (pid, uid) {
+exports = function (Posts: PostType) {
+    Posts.delete = async function (pid: number, uid: number): Promise<PostData> {
         return await deleteOrRestore('delete', pid, uid);
     };
 
-    Posts.restore = async function (pid, uid) {
+    Posts.restore = async function (pid: number, uid: number): Promise<PostData> {
         return await deleteOrRestore('restore', pid, uid);
     };
 
