@@ -7,6 +7,28 @@ import notifications from '../notifications';
 import plugins from '../plugins';
 import flags from '../flags';
 
+interface PostType {
+
+  delete: (pid: number, uid: number) => Promise<PostData>;
+  restore: (pid: number, uid: number) => Promise<PostData>;
+  purge: (pids: number | number[], uid: number) => Promise<void>;
+  getPostFields: (pid: number, fields: string[]) => Promise<PostData>;
+  setPostFields: (pid: number, data: { deleted: number; deleterUid: number }) => Promise<void>;
+  getPostsData: (pids: number[]) => Promise<PostData[]>;
+}
+
+interface PostData {
+  pid: number;
+  tid: number;
+  uid: number;
+  content: string;
+  timestamp: number;
+  toPid: number | null;
+  cid?: number;
+  flagId?: number;
+  topic?: TopicObject;
+}
+
 exports = function (Posts) {
     Posts.delete = async function (pid, uid) {
         return await deleteOrRestore('delete', pid, uid);
