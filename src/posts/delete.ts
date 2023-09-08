@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import _ from 'lodash';
 import db from '../database';
 import topics from '../topics';
@@ -6,6 +7,7 @@ import user from '../user';
 import notifications from '../notifications';
 import plugins from '../plugins';
 import flags from '../flags';
+import { TopicObject } from '../types/topic';
 
 interface PostType {
 
