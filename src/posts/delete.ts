@@ -15,6 +15,14 @@ interface ListFunction {
 interface Diffs {
   list: ListFunction;
 }
+
+interface DissociateAllFunction {
+  (pid: number): Promise<void>;
+}
+
+interface Uploads {
+  dissociateAll: DissociateAllFunction;
+}
 interface PostType {
   diffs: Diffs;
   delete: (pid: number, uid: number) => Promise<PostData>;
@@ -23,6 +31,7 @@ interface PostType {
   getPostFields: (pid: number, fields: string[]) => Promise<PostData>;
   setPostFields: (pid: number, data: { deleted: number; deleterUid: number }) => Promise<void>;
   getPostsData: (pids: number[]) => Promise<PostData[]>;
+  uploads: Uploads;
 }
 
 interface PostData {
@@ -324,9 +333,10 @@ exports = function (Posts: PostType) {
         ]);
     }
 
-    async function deleteFromUploads(pids) {
+    async function deleteFromUploads(pids: number[]): Promise<void> {
         await Promise.all(pids.map(Posts.uploads.dissociateAll));
     }
+
 
     async function resolveFlags(postData, uid) {
         const flaggedPosts = postData.filter(p => parseInt(p.flagId, 10));
