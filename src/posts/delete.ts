@@ -78,7 +78,7 @@ exports = function (Posts: PostType) {
         return postData;
     }
 
-    Posts.purge = async function (pids, uid) {
+    Posts.purge = async function (pids: number | number[], uid: number) {
         pids = Array.isArray(pids) ? pids : [pids];
         let postData = await Posts.getPostsData(pids);
         pids = pids.filter((pid, index) => !!postData[index]);
@@ -87,12 +87,16 @@ exports = function (Posts: PostType) {
             return;
         }
         const uniqTids = _.uniq(postData.map(p => p.tid));
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const topicData = await topics.getTopicsFields(uniqTids, ['tid', 'cid', 'pinned', 'postcount']);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const tidToTopic = _.zipObject(uniqTids, topicData);
 
         postData.forEach((p) => {
-            p.topic = tidToTopic[p.tid];
-            p.cid = tidToTopic[p.tid] && tidToTopic[p.tid].cid;
+            p.topic = tidToTopic[p.tid] as TopicObject;
+            p.cid = (tidToTopic[p.tid] as TopicObject).cid;
         });
 
         // deprecated hook
@@ -114,6 +118,8 @@ exports = function (Posts: PostType) {
             deleteFromGroups(pids),
             deleteDiffs(pids),
             deleteFromUploads(pids),
+            // This next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             db.sortedSetsRemove(['posts:pid', 'posts:votes', 'posts:flagged'], pids),
         ]);
 
