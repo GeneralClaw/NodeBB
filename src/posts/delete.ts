@@ -38,7 +38,7 @@ exports = function (Posts: PostType) {
         return await deleteOrRestore('restore', pid, uid);
     };
 
-    async function deleteOrRestore(type, pid, uid) {
+    async function deleteOrRestore(type: 'delete' | 'restore', pid: number, uid: number): Promise<PostData> {
         const isDeleting = type === 'delete';
         await plugins.hooks.fire(`filter:post.${type}`, { pid: pid, uid: uid });
         await Posts.setPostFields(pid, {
@@ -46,17 +46,32 @@ exports = function (Posts: PostType) {
             deleterUid: isDeleting ? uid : 0,
         });
         const postData = await Posts.getPostFields(pid, ['pid', 'tid', 'uid', 'content', 'timestamp']);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const topicData = await topics.getTopicFields(postData.tid, ['tid', 'cid', 'pinned']);
+        // The next line makes an assignment for a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         postData.cid = topicData.cid;
         await Promise.all([
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             topics.updateLastPostTimeFromLastPid(postData.tid),
+            // The next line calls a function in a module that has not been updated to TS yet
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             topics.updateTeaser(postData.tid),
             isDeleting ?
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line max-len
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/restrict-template-expressions
                 db.sortedSetRemove(`cid:${topicData.cid}:pids`, pid) :
+                // The next line calls a function in a module that has not been updated to TS yet
+                // eslint-disable-next-line max-len
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/restrict-template-expressions
                 db.sortedSetAdd(`cid:${topicData.cid}:pids`, postData.timestamp, pid),
         ]);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         await categories.updateRecentTidForCid(postData.cid);
-        plugins.hooks.fire(`action:post.${type}`, { post: _.clone(postData), uid: uid });
+        plugins.hooks.fire(`action:post.${type}`, { post: _.clone(postData), uid: uid }).catch((error) => { console.error('Error:', error); });
         if (type === 'delete') {
             await flags.resolveFlag('post', pid, uid);
         }
